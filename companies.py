@@ -1,7 +1,9 @@
+import logging
 import re
 import urllib.request as request
 import json
 import ijson
+from typing import Tuple, List
 import requests
 from pandas.io.json import json_normalize
 import pandas as pd
@@ -10,9 +12,19 @@ from tqdm import tqdm
 COMPANIES_ENDPOINT = "https://pdl-canonical-data.s3-us-west-2.amazonaws.com/person/v10.0/company_v10.0_full.json"
 COMPANY_SIZE_ENUM_ENDPOINT = "https://pdl-canonical-data.s3-us-west-2.amazonaws.com/person/v10.0/company_size.txt"
 
+logger = None
+
+def _get_company_size_range(company_size: int, company_size_ranges: List[Tuple[int, int]]) -> str:
+    for curr_range in company_size_ranges:
+        top_range = curr_range[1]
+        if top_range > company_size:
+            return f'{curr_range[0]}-{curr_range[1]}'
+    return f'{company_size_ranges[-1][0]}+'
+
 
 def main(args=None):
     # Populate ENUM
+    logger.info('fetching company size enum')
     response = request.urlopen(COMPANY_SIZE_ENUM_ENDPOINT)
     ranges = []
     for line in response:
@@ -22,6 +34,7 @@ def main(args=None):
         if splitted[1] == '':
             splitted[1] = splitted[0]
         ranges.append(tuple(map(int, splitted)))
+    logger.info('company size enum - Populated')
     
     entries = []
     f = request.urlopen(COMPANIES_ENDPOINT)
@@ -35,9 +48,15 @@ def main(args=None):
             if iterator_count > limit:
                 break
             pbar.set_description(f'Fetching entry {iterator_count}')
+            company_size = _get_company_size_range(int(obj['employee_counts']['v9_total']), ranges)  
+            obj['company_size_range'] = company_size
             entries.append(obj)
             iterator_count += 1
             pbar.update(1)
     
+    
 if __name__ == "__main__":
+    logging.basicConfig()
+    logging.root.setLevel(logging.NOTSET)
+    logger = logging.getLogger()
     main()
