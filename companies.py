@@ -3,7 +3,7 @@ import re
 import urllib.request as request
 import json
 import ijson
-from typing import Tuple, List
+from typing import Tuple, List, Set
 import requests
 from pandas.io.json import json_normalize
 import pandas as pd
@@ -11,7 +11,7 @@ from tqdm import tqdm
 from countrygroups import EUROPEAN_UNION
 from collections import Counter
 import matplotlib.pyplot as plt
-
+import nltk
 
 COMPANIES_ENDPOINT = "https://pdl-canonical-data.s3-us-west-2.amazonaws.com/person/v10.0/company_v10.0_full.json"
 COMPANY_SIZE_ENUM_ENDPOINT = "https://pdl-canonical-data.s3-us-west-2.amazonaws.com/person/v10.0/company_size.txt"
@@ -24,6 +24,27 @@ def _get_company_size_range(company_size: int, company_size_ranges: List[Tuple[i
         if top_range > company_size:
             return f'{curr_range[0]}-{curr_range[1]}'
     return f'{company_size_ranges[-1][0]}+'
+
+WANTED_TOKENIZED_TAGS = (
+    'NNS',
+)
+
+
+def _extract_keywords(input: str) -> Set[str]:
+    """Use tokenizer to tag each word, we do not want particle, verbs or pronouns..
+    This is a VERy simplified descision algorithm as we need to take into account the morpho-syntactic of words
+    and the frequency of appearence
+    Since we only interested in keyword that might describe or tag a company to a specific field or interest,
+    we will look for  NNS: Noun, plural
+
+    """
+    try:
+        tokens = nltk.word_tokenize(input)
+    except Exception:
+        return ''
+    tagged = nltk.pos_tag(tokens)
+    tags = set([k[0] for k in list(filter(lambda x: x[1] in WANTED_TOKENIZED_TAGS, tagged))])
+    return tags
 
 
 def main(args=None):
@@ -66,11 +87,14 @@ def main(args=None):
     only_europian.groupby('country')['country'].count().plot(title='companies per country', kind='bar')
     plt.savefig('companies_per_country_histo.png')
     only_europian.groupby('country').count().to_csv('companies_per_country.csv', columns=['pdl_id'])
-
-
     
+    logger.info('classifing keywords')
+    # Classifing keywords
+    dataframe['Keywords'] = dataframe.apply(lambda x: _extract_keywords(x['description']),axis=1)
+    
+
 if __name__ == "__main__":
     logging.basicConfig()
-    logging.root.setLevel(logging.NOTSET)
-    logger = logging.getLogger()
+    logging.root.setLevel(logging.INFO)
+    logger = logging.getLogger('Companies ETL')
     main()
