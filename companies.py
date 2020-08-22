@@ -64,8 +64,8 @@ def main(args=None):
     only_europian = dataframe[dataframe['is_europian'] == True]
     
     only_europian.groupby('country')['country'].count().plot(title='companies per country', kind='bar')
-    plt.savefig('plot.png')
-
+    plt.savefig('companies_per_country_histo.png')
+    only_europian.groupby('country').count().to_csv('companies_per_country.csv', columns=['pdl_id'])
 
 
     
