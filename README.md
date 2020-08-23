@@ -3,8 +3,8 @@
 create and run the local virtualenv
 
 ```
-python3 -m venv lusha-env
-source lusha/bin/activate
+python3 -m venv companies-env
+source companies/bin/activate
 pip install -r requirements
 ```
 
