@@ -11,6 +11,10 @@ pip install -r requirements
 
 #### Running the file:
 `python companies.py`
+```
+--quiet silence info logs
+--limit entries limit, default to 10k
+```
 
 The task outputs the following files:
 * **companies_per_country_histo.png** - histogram of the companies grouped by EU countries.
