@@ -27,6 +27,7 @@ def _get_company_size_range(company_size: int, company_size_ranges: List[Tuple[i
 
 WANTED_TOKENIZED_TAGS = (
     'NNS',
+    'NN'
 )
 
 
@@ -89,9 +90,10 @@ def main(args=None):
     only_europian.groupby('country').count().to_csv('companies_per_country.csv', columns=['pdl_id'])
     
     logger.info('classifing keywords')
+    
     # Classifing keywords
     dataframe['Keywords'] = dataframe.apply(lambda x: _extract_keywords(x['description']),axis=1)
-    
+    dataframe.to_csv('companies_per_country.csv', columns=['name', 'Keywords'])    
 
 if __name__ == "__main__":
     logging.basicConfig()
