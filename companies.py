@@ -90,10 +90,10 @@ def main(args=None):
     only_europian.groupby('country').count().to_csv('companies_per_country.csv', columns=['pdl_id'])
     
     logger.info('classifing keywords')
-    
     # Classifing keywords
     dataframe['Keywords'] = dataframe.apply(lambda x: _extract_keywords(x['description']),axis=1)
     dataframe.to_csv('companies_per_country.csv', columns=['name', 'Keywords'])    
+    logger.info('keyword classification written to csv')
 
 if __name__ == "__main__":
     logging.basicConfig()
