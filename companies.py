@@ -12,11 +12,24 @@ from countrygroups import EUROPEAN_UNION
 from collections import Counter
 import matplotlib.pyplot as plt
 import nltk
+import argparse
+
 
 COMPANIES_ENDPOINT = "https://pdl-canonical-data.s3-us-west-2.amazonaws.com/person/v10.0/company_v10.0_full.json"
 COMPANY_SIZE_ENUM_ENDPOINT = "https://pdl-canonical-data.s3-us-west-2.amazonaws.com/person/v10.0/company_size.txt"
 
 logger = None
+
+parser = argparse.ArgumentParser(description='Companies parser task')
+parser.add_argument('--quiet', dest='quiet', action='store_true',
+                   default=False,
+                   help='No verbose ouput')
+
+parser.add_argument('--limit', dest='limit',
+                   default=10000,
+                   help='entries limit')
+
+args = parser.parse_args()
 
 def _get_company_size_range(company_size: int, company_size_ranges: List[Tuple[int, int]]) -> str:
     for curr_range in company_size_ranges:
@@ -49,9 +62,15 @@ def _extract_keywords(input: str) -> Set[str]:
 
 
 def main(args=None):
+    # Parse arguments
+    args = parser.parse_args()
+    entries_limit = int(args.limit)
+    quiet = args.quiet
+
     # Populate ENUM
     EUROPEAN_UNION_COUNTRIES = [x.lower() for x in EUROPEAN_UNION.names]
-    logger.info('fetching company size enum')
+    if not quiet:
+        logger.info('fetching company size enum')
     response = request.urlopen(COMPANY_SIZE_ENUM_ENDPOINT)
     ranges = []
     for line in response:
@@ -61,18 +80,20 @@ def main(args=None):
         if splitted[1] == '':
             splitted[1] = splitted[0]
         ranges.append(tuple(map(int, splitted)))
-    logger.info('company size enum - Populated')
+    
+    if not quiet:
+        logger.info('company size enum - Populated')
+    
     
     entries = []
     f = request.urlopen(COMPANIES_ENDPOINT)
     objects = ijson.items(f, '', multiple_values=True)
 
-
-    limit = 10000
+    
     iterator_count = 0
-    with tqdm(total=limit) as pbar:
+    with tqdm(total=entries_limit, disable=quiet) as pbar:
         for obj in objects:
-            if iterator_count > limit:
+            if iterator_count > entries_limit:
                 break
             pbar.set_description(f'Fetching entry {iterator_count}')
             company_size = _get_company_size_range(int(obj['employee_counts']['v9_total']), ranges)  
@@ -89,11 +110,13 @@ def main(args=None):
     plt.savefig('companies_per_country_histo.png')
     only_europian.groupby('country').count().to_csv('companies_per_country.csv', columns=['pdl_id'])
     
-    logger.info('classifing keywords')
+    if not quiet:
+        logger.info('classifing keywords')
     # Classifing keywords
     dataframe['Keywords'] = dataframe.apply(lambda x: _extract_keywords(x['description']),axis=1)
     dataframe.to_csv('companies_per_country.csv', columns=['name', 'Keywords'])    
-    logger.info('keyword classification written to csv')
+    if not quiet:
+        logger.info('keyword classification written to csv')
 
 if __name__ == "__main__":
     logging.basicConfig()
